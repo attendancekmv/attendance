@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    
+<meta charset="UTF-8">
+    
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+<title>School Attendance System - Dashboard</title>
+    
+<style>
+        
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+.card { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; text-align: center; }
+        
+.header h1 { font-size: 20px; }
+    .header p { opacity: 0.85; margin-top: 3px; font-size: 12px; }
+     
+.btn-group { margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        
+button { background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
+        
+button:hover { background-color: #2980b9; }
+        
+button.active { background-color: #2ecc71; }
+        
+.panel { display: none; }
+        
+.panel.active { display: block; }
+        
+.feature-btn { display: block; width: 100%; padding: 14px; margin: 12px 0; background-color: #27ae60; color: white; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; box-sizing: border-box; }
+        
+.feature-btn:hover { background-color: #219653; }
+        
+.feature-btn.face { background-color: #e67e22; }
+        
+.feature-btn.face:hover { background-color: #d35400; }
+        
+input[type="text"] { width: 80%; padding: 10px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        
+#status { margin-top: 20px; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold; }
+        
+.success { background-color: #d4edda; color: #155724; }
+        
+.error { background-color: #f8d7da; color: #721c24; }
+    
+</style>
+
+</head>
+
+<body>
+
+
+<div class="card">
+    
+<div class="header">
+  <h1>KMV Attendance System</h1>
+  <p>In / Out | QR Scanner | Subjects | Grade / Class</p>
+</div>  
+    
+<!-- Navigation Buttons -->
+    
+<div class="btn-group">
+        
+<button class="active" onclick="showPanel('dashboard', this)">Dashboard</button>
+        
+<button onclick="showPanel('scanner-hub', this)">QR Scanner</button>
+    
+</div>
+
+    
+<!-- Dashboard Panel -->
+ 
+   
+<div id="panel-dashboard" class="panel active">
+        
+<p style="color: #555; margin-bottom: 20px;">Welcome to the School Attendance System. Choose a scanning mode below or enter attendance manually.</p>
+        
+        
+<a href="scanner.html" class="feature-btn">📷 Open QR Scanner (scanner.html)</a>
+        
+<a href="face-scanner.html" class="feature-btn face">👤 Open Face Scanner (face-scanner.html)</a>
+
+        
+<div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px;">
+            
+<h3>Manual Attendance Entry</h3>
+            
+<input type="text" id="manual-id" placeholder="Enter Student ID (e.g. ST001)">
+            <br>
+            
+<button onclick="submitManual()" style="margin-top: 10px; background-color: #34495e;">Submit Manual ID</button>
+        
+</div>
+    
+</div>
+
+    
+<!-- QR Scanner Hub Panel -->
+    
+<div id="panel-scanner-hub" class="panel">
+        
+<p style="color: #555; margin-bottom: 20px;">Direct link to QR Code scanner page:</p>
+        
+<a href="scanner.html" class="feature-btn">📷 Go to QR Scanner (scanner.html)</a>
+        
+<a href="face-scanner.html" class="feature-btn face">👤 Go to Face Scanner (face-scanner.html)</a>
+    
+</div>
+
+    
+<div id="status">
+</div>
+</div>
+
+
+<script>
+    
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMHvLvF7YYQBiayH81xHzpZJmnC4Jzr-s99_aX3dXRCO2kzV873KReqaZrkuLU-oSYRg/exec"; // Replace with your Web App URL
+
+    
+function showPanel(panelName, btn) 
+{
+        
+document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        
+document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+        
+        
+document.getElementById('panel-' + panelName).classList.add('active');
+        
+btn.classList.add('active');
+    }
+
+    
+
+function showStatus(message, type) {
+       
+ const statusDiv = document.getElementById('status');
+        statusDiv.className = type;
+        
+statusDiv.innerText = message;
+        
+setTimeout(() => { statusDiv.className = ""; 
+statusDiv.innerText = ""; }, 4000);
+    }
+
+    
+function submitManual() {
+        
+const input = document.getElementById('manual-id');
+        
+const studentId = input.value.trim();
+        
+if (!studentId) {
+            
+showStatus("Please enter a valid Student ID.", "error");
+            return;
+        }
+
+        showStatus("Processing attendance for " + studentId + "...", "info");
+        fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "markAttendance", studentId: studentId, method: "Manual Entry" })
+        })
+        .then(() => {
+            showStatus("Attendance marked successfully for " + studentId, "success");
+            input.value = "";
+        })
+        .catch(err => {
+            showStatus("Failed to communicate with server.", "error");
+        
+});
+    
+}
+
+</script>
+
+
+</body>
+
+</html>

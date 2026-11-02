@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Scanner - School Attendance</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; }
+        video { width: 100%; max-height: 350px; border-radius: 8px; object-fit: cover; margin-top: 15px; }
+        .btn-action { background: #e67e22; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
+        .btn-back { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 15px; }
+        #status { margin-top: 20px; padding: 12px; border-radius: 6px; font-weight: bold; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Face Recognition Scanner</h2>
+    <button id="start-btn" class="btn-action" onclick="startCamera()">📷 Start Camera & AI</button>
+    <video id="webcam" autoplay muted playsinline></video>
+    <p id="face-status" style="color: #666; margin-top: 10px;">Click the button above to start.</p>
+    <div id="status"></div>
+    <br>
+    <button class="btn-back" onclick="window.location.href='index.html'">Back to Dashboard</button>
+</div>
+
+<script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Replace with your Web App URL
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = type;
+        statusDiv.innerText = message;
+        setTimeout(() => { statusDiv.className = ""; statusDiv.innerText = ""; }, 4000);
+    }
+
+    function sendAttendance(studentId) {
+        if (!studentId) return;
+        fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "markAttendance", studentId: studentId, method: "Face Recognition" })
+        })
+        .then(() => {
+            showStatus("Attendance marked for " + studentId, "success");
+        })
+        .catch(err => {
+            showStatus("Failed to communicate with server.", "error");
+        });
+    }
+
+    async function startCamera() {
+        const faceStatus = document.getElementById('face-status');
+        const video = document.getElementById('webcam');
+        const btn = document.getElementById('start-btn');
+        btn.style.display = 'none';
+
+        try {
+            faceStatus.innerText = "Requesting camera permission...";
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            faceStatus.innerText = "Camera active. Loading AI models...";
+
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/');
+            faceStatus.innerText = "Face recognition ready! Detecting face...";
+
+            setInterval(async () => {
+                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+                if (detections) {
+                    faceStatus.innerText = "Face detected!";
+                    // Example: auto mark attendance for demo student
+                    // sendAttendance("ST001");
+                } else {
+                    faceStatus.innerText = "Looking for face...";
+                }
+            }, 1500);
+
+        } catch (err) {
+            console.error(err);
+            btn.style.display = 'inline-block';
+            faceStatus.innerText = "Camera permission denied or unavailable.";
+            showStatus("Camera error: " + err.message, "error");
+        }
+    }
+</script>
+
+</body>
+</html>

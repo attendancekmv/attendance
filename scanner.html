@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - School Attendance</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 15px; }
+        .btn-back { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 15px; }
+        #status { margin-top: 20px; padding: 12px; border-radius: 6px; font-weight: bold; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>QR Code Attendance Scanner</h2>
+    <div id="reader"></div>
+    <div id="status"></div>
+    <button class="btn-back" onclick="window.location.href='index.html'">Back to Dashboard</button>
+</div>
+
+<script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Replace with your Web App URL
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = type;
+        statusDiv.innerText = message;
+        setTimeout(() => { statusDiv.className = ""; statusDiv.innerText = ""; }, 4000);
+    }
+
+    function sendAttendance(studentId) {
+        if (!studentId) return;
+        showStatus("Processing " + studentId + "...", "info");
+        
+        fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "markAttendance", studentId: studentId, method: "QR Code" })
+        })
+        .then(() => {
+            showStatus("Attendance marked successfully for " + studentId, "success");
+        })
+        .catch(err => {
+            showStatus("Failed to send data to server.", "error");
+        });
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+            sendAttendance(decodedText.trim());
+            html5QrCode.pause();
+            setTimeout(() => { html5QrCode.resume(); }, 3000);
+        },
+        (error) => {}
+    ).catch(err => {
+        showStatus("Camera permission denied or unavailable.", "error");
+    });
+</script>
+
+</body>
+</html>
