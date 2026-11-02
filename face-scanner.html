@@ -1,93 +1,547 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Scanner - School Attendance</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; text-align: center; }
-        .card { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; }
-        video { width: 100%; max-height: 350px; border-radius: 8px; object-fit: cover; margin-top: 15px; }
-        .btn-action { background: #e67e22; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
-        .btn-back { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 15px; }
-        #status { margin-top: 20px; padding: 12px; border-radius: 6px; font-weight: bold; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Face Attendance Scanner (Mobile Friendly)</title>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; padding-bottom: 20px; }
+  .header {
+    background: linear-gradient(135deg, #7b1fa2, #4a148c); color: white;
+    padding: 16px 15px; text-align: center;
+  }
+  .header h1 { font-size: 18px; }
+  .header p { opacity: .85; font-size: 11px; margin-top: 3px; }
+  .container { max-width: 480px; margin: 12px auto; padding: 0 10px; }
+  .card {
+    background: white; border-radius: 12px; padding: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08); margin-bottom: 12px;
+  }
+  label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #555; }
+  select, input {
+    width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;
+    font-size: 14px; margin-bottom: 10px; background: #fff;
+  }
+  .tabs { display: flex; border-radius: 10px; overflow: hidden; border: 3px solid #ddd; margin-bottom: 12px; }
+  .tabs button {
+    flex: 1; padding: 12px; font-size: 14px; font-weight: 700;
+    border: none; cursor: pointer; background: #e0e0e0; color: #666;
+  }
+  .tabs button.active { background: #7b1fa2; color: white; }
+  .toggle { display: flex; border-radius: 10px; overflow: hidden; border: 3px solid #ddd; margin: 10px 0; }
+  .toggle button {
+    flex: 1; padding: 12px; font-size: 15px; font-weight: 700;
+    border: none; cursor: pointer; background: #e0e0e0; color: #666;
+  }
+  .toggle .in.active { background: #0f9d58; color: white; }
+  .toggle .out.active { background: #db4437; color: white; }
+  .btn {
+    display: inline-block; padding: 12px 20px; border: none; border-radius: 8px;
+    font-weight: 600; cursor: pointer; font-size: 14px; color: white; text-align: center;
+  }
+  .btn-purple { background: #7b1fa2; }
+  .btn-red { background: #db4437; }
+  .btn-green { background: #0f9d58; }
+  .btn-block { width: 100%; display: block; margin-top: 6px; }
+  .video-wrap {
+    position: relative; width: 100%; max-width: 360px; margin: 10px auto;
+    border-radius: 12px; overflow: hidden; border: 3px solid #7b1fa2; background: #000;
+  }
+  #faceVideo, #regVideo { width: 100% !important; height: auto !important; display: block; max-height: 280px; object-fit: cover; }
+  #faceCanvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+  .result {
+    padding: 12px; border-radius: 8px; text-align: center; font-size: 14px;
+    font-weight: 700; display: none; margin-top: 10px;
+  }
+  .result.ok { background: #e6f4ea; color: #0f9d58; border: 2px solid #0f9d58; display: block; }
+  .result.err { background: #fce8e6; color: #db4437; border: 2px solid #db4437; display: block; }
+  .result.info { background: #fef7e0; color: #f57f17; border: 2px solid #f57f17; display: block; }
+  .log { max-height: 150px; overflow-y: auto; margin-top: 10px; }
+  .log-item { padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 4px; font-size: 12px; background: #fafafa; }
+  .center { text-align: center; }
+  .hint { font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-row button { flex: 1; }
+</style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Face Recognition Scanner</h2>
-    <button id="start-btn" class="btn-action" onclick="startCamera()">📷 Start Camera & AI</button>
-    <video id="webcam" autoplay muted playsinline></video>
-    <p id="face-status" style="color: #666; margin-top: 10px;">Click the button above to start.</p>
-    <div id="status"></div>
-    <br>
-    <button class="btn-back" onclick="window.location.href='index.html'">Back to Dashboard</button>
+<div class="header">
+  <h1>Face Attendance Scanner</h1>
+  <p>Mobile Face Recognition &amp; Registration</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <label>App Script Web App URL</label>
+    <input type="text" id="appUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="onAppUrlChanged()">
+    <p class="hint">Paste your /exec URL (saved in browser)</p>
+    <label>Scanner Token (optional)</label>
+    <input type="text" id="token" placeholder="Leave blank if not set">
+    <button class="btn btn-purple" style="width:100%; margin-top:8px; padding:8px; font-size:12px;" onclick="reloadAllData()">🔄 Reload Subjects &amp; Students</button>
+  </div>
+
+  <div class="tabs">
+    <button class="active" onclick="switchTab('scan', this)">Scan Faces</button>
+    <button onclick="switchTab('register', this)">Register Face</button>
+  </div>
+
+  <!-- ============ SCAN MODE ============ -->
+  <div id="scanMode">
+    <div class="card">
+      <label>Subject</label>
+      <select id="subject"><option value="">-- Select Subject --</option></select>
+      <input type="text" id="manualSubject" placeholder="Or type subject name manually" style="display:none;">
+      <button class="btn btn-block" style="background:#ddd;color:#333;margin-bottom:10px;font-size:12px;padding:8px;" onclick="toggleManualSubject()">Can't see subjects? Enter manually</button>
+
+      <div class="toggle">
+        <button class="in active" onclick="setAction('IN', this)">IN</button>
+        <button class="out" onclick="setAction('OUT', this)">OUT</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-purple" onclick="startScan()">Start Camera</button>
+        <button class="btn btn-red" onclick="stopScan()">Stop</button>
+      </div>
+
+      <div class="video-wrap">
+        <video id="faceVideo" width="360" height="270" autoplay muted playsinline></video>
+        <canvas id="faceCanvas" width="360" height="270"></canvas>
+      </div>
+      <div class="result" id="result"></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <!-- ============ REGISTER MODE ============ -->
+  <div id="registerMode" style="display:none;">
+    <div class="card">
+      <label>Student</label>
+      <select id="stuSelect"><option value="">-- Select Student --</option></select>
+      <input type="text" id="manualStudentId" placeholder="Or type Student ID manually (e.g. STU-20260001)" style="display:none;">
+      <button class="btn btn-block" style="background:#ddd;color:#333;margin-bottom:10px;font-size:12px;padding:8px;" onclick="toggleManualStudent()">Can't see students? Enter manually</button>
+
+      <div class="btn-row">
+        <button class="btn btn-orange" onclick="startRegCamera()">Start Camera</button>
+        <button class="btn btn-purple" onclick="registerFace()">Capture &amp; Register</button>
+      </div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn btn-red" onclick="stopCamera()">Stop Camera</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <input type="file" id="regPhotoInput" accept="image/*" capture="user" style="display:none;" onchange="registerFromPhoto(this)">
+        <button class="btn" style="background:#1a73e8; width:100%; color:white;" onclick="document.getElementById('regPhotoInput').click()">Take Photo &amp; Register (Fallback)</button>
+      </div>
+
+      <div class="video-wrap">
+        <video id="regVideo" width="360" height="270" autoplay muted playsinline></video>
+      </div>
+      <div class="result" id="regResult"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Replace with your Web App URL
+  var scanStream = null;
+  var regStream = null;
+  var scanInterval = null;
+  var modelsLoaded = false;
+  var action = 'IN';
+  var allFaces = {};
+  var studentMap = {};
 
-    function showStatus(message, type) {
-        const statusDiv = document.getElementById('status');
-        statusDiv.className = type;
-        statusDiv.innerText = message;
-        setTimeout(() => { statusDiv.className = ""; statusDiv.innerText = ""; }, 4000);
+  function appUrl() {
+    var url = document.getElementById('appUrl').value.trim();
+    if (url && url.indexOf('/edit') !== -1) {
+      alert('⚠️ Warning: You entered the Script Editor URL ("/edit"). Please use the Web App Deployment URL ending in "/exec".');
     }
+    if (url) localStorage.setItem('attAppUrl', url);
+    return url;
+  }
+  function apiUrl(actionName) {
+    var token = document.getElementById('token').value.trim();
+    return appUrl() + '?action=' + actionName + (token ? '&token=' + encodeURIComponent(token) : '');
+  }
 
-    function sendAttendance(studentId) {
-        if (!studentId) return;
-        fetch(APPS_SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "markAttendance", studentId: studentId, method: "Face Recognition" })
+  function showResult(elId, type, msg) {
+    var el = document.getElementById(elId);
+    el.className = 'result ' + type;
+    el.textContent = msg;
+    setTimeout(function() { el.className = 'result'; }, 4000);
+  }
+  function addLog(msg) {
+    var log = document.getElementById('log');
+    log.innerHTML = '<div class="log-item">' + msg + '</div>' + log.innerHTML;
+  }
+  function reloadAllData() {
+    var url = appUrl();
+    if (!url || url.indexOf('http') !== 0) {
+      alert('Please enter Web App URL first.');
+      return;
+    }
+    loadSubjects();
+    loadStudents();
+    loadFaces();
+    alert('Reloading subjects and students...');
+  }
+
+  function onAppUrlChanged() {
+    var url = appUrl();
+    if (url && url.indexOf('http') === 0) {
+      loadSubjects();
+      loadStudents();
+      loadFaces();
+    }
+  }
+
+  function switchTab(mode, btn) {
+    document.querySelectorAll('.tabs button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (mode === 'scan') { stopCamera(); document.getElementById('registerMode').style.display = 'none'; document.getElementById('scanMode').style.display = 'block'; loadSubjects(); loadFaces(); }
+    else { stopScan(); document.getElementById('scanMode').style.display = 'none'; document.getElementById('registerMode').style.display = 'block'; loadStudents(); }
+  }
+  function toggleManualSubject() {
+    var s = document.getElementById('manualSubject');
+    s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  }
+  function toggleManualStudent() {
+    var s = document.getElementById('manualStudentId');
+    s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  }
+  function setAction(a, btn) {
+    action = a;
+    btn.parentElement.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+  function currentSubject() {
+    var sel = document.getElementById('subject').value;
+    var manual = document.getElementById('manualSubject').value.trim();
+    return manual || sel;
+  }
+  function currentStudentId() {
+    var sel = document.getElementById('stuSelect').value;
+    var manual = document.getElementById('manualStudentId').value.trim();
+    return manual || sel;
+  }
+
+  function loadViaJsonp(url, onSuccess, onError) {
+    var scriptId = 'jsonp_' + Math.random().toString(36).substring(7);
+    window[scriptId] = function(data) {
+      delete window[scriptId];
+      var el = document.getElementById(scriptId);
+      if (el) el.remove();
+      onSuccess(data);
+    };
+    var script = document.createElement('script');
+    script.id = scriptId;
+    script.src = url + '&callback=' + scriptId;
+    script.onerror = function() {
+      delete window[scriptId];
+      script.remove();
+      if (onError) onError();
+    };
+    document.body.appendChild(script);
+  }
+
+  function loadData(actionName, onSuccess, onError) {
+    var targetUrl = apiUrl(actionName);
+    
+    // Try JSONP first (best for Apps Script)
+    loadViaJsonp(targetUrl, function(data) {
+      if (data && data.error) {
+        if (onError) onError(new Error(data.error));
+        return;
+      }
+      onSuccess(data);
+    }, function() {
+      // Fallback to corsproxy.io
+      fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl))
+        .then(function(res) { return res.text(); })
+        .then(function(text) {
+          if (!text || text.trim().indexOf('<') === 0) {
+            throw new Error('Apps Script returned HTML. Ensure Web App access is set to "Anyone".');
+          }
+          var parsed = JSON.parse(text);
+          onSuccess(parsed);
         })
-        .then(() => {
-            showStatus("Attendance marked for " + studentId, "success");
-        })
-        .catch(err => {
-            showStatus("Failed to communicate with server.", "error");
+        .catch(function(err) {
+          // Fallback to allorigins.win
+          fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl))
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              var text = data.contents;
+              if (!text || text.trim().indexOf('<') === 0) {
+                throw new Error('Apps Script returned HTML. Ensure Web App access is set to "Anyone".');
+              }
+              var parsed = JSON.parse(text);
+              onSuccess(parsed);
+            })
+            .catch(function(err2) {
+              if (onError) onError(new Error('Failed to load. Ensure Apps Script Web App access is set to "Anyone" in deployment settings, or use "Enter manually".'));
+            });
         });
+    });
+  }
+
+  function loadSubjects() {
+    if (!appUrl()) return;
+    loadData('subjects', function(data) {
+      if (data.error) { showResult('result', 'err', data.error); return; }
+      var sel = document.getElementById('subject');
+      sel.innerHTML = '<option value="">-- Select Subject --</option>';
+      (data || []).forEach(function(s) {
+        sel.innerHTML += '<option value="' + s.name + '">' + s.name + (s.no ? ' (No ' + s.no + ')' : '') + '</option>';
+      });
+    }, function() {
+      showResult('result', 'err', 'Cannot load subjects. Check Web App URL.');
+    });
+  }
+
+  function loadStudents() {
+    if (!appUrl()) { showResult('regResult', 'err', 'Enter Web App URL first.'); return; }
+    showResult('regResult', 'info', 'Loading students...');
+    loadData('students', function(data) {
+      if (data.error) { showResult('regResult', 'err', 'Error: ' + data.error); return; }
+      var sel = document.getElementById('stuSelect');
+      sel.innerHTML = '<option value="">-- Select Student --</option>';
+      (data || []).forEach(function(s) {
+        sel.innerHTML += '<option value="' + s.id + '">' + s.name + ' (' + s.id + ')</option>';
+      });
+      showResult('regResult', 'ok', 'Loaded ' + (data ? data.length : 0) + ' students.');
+    }, function() {
+      showResult('regResult', 'err', 'Failed to load students.');
+    });
+  }
+
+  function loadFaces() {
+    if (!appUrl()) return;
+    loadData('faces', function(data) {
+      if (data.error) return;
+      allFaces = data.faces || {};
+      studentMap = data.students || {};
+    }, function() {});
+  }
+
+  async function loadFaceModels() {
+    if (modelsLoaded) return true;
+    try {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+      modelsLoaded = true;
+      return true;
+    } catch(e) { return false; }
+  }
+
+  async function startScan() {
+    var subject = currentSubject();
+    if (!subject) { showResult('result', 'err', 'Select a subject!'); return; }
+    if (!appUrl()) { showResult('result', 'err', 'Enter Web App URL!'); return; }
+
+    showResult('result', 'info', 'Loading models...');
+    var loaded = await loadFaceModels();
+    if (!loaded) { showResult('result', 'err', 'Failed to load face models.'); return; }
+    loadFaces();
+
+    var video = document.getElementById('faceVideo');
+    var canvas = document.getElementById('faceCanvas');
+    var ctx = canvas.getContext('2d');
+
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 360 }, height: { ideal: 270 } } });
+      video.srcObject = scanStream;
+      await video.play();
+    } catch(e) {
+      return;
     }
 
-    async function startCamera() {
-        const faceStatus = document.getElementById('face-status');
-        const video = document.getElementById('webcam');
-        const btn = document.getElementById('start-btn');
-        btn.style.display = 'none';
+    showResult('result', 'info', 'Scanning face...');
 
-        try {
-            faceStatus.innerText = "Requesting camera permission...";
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            faceStatus.innerText = "Camera active. Loading AI models...";
-
-            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model/');
-            faceStatus.innerText = "Face recognition ready! Detecting face...";
-
-            setInterval(async () => {
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
-                if (detections) {
-                    faceStatus.innerText = "Face detected!";
-                    // Example: auto mark attendance for demo student
-                    // sendAttendance("ST001");
-                } else {
-                    faceStatus.innerText = "Looking for face...";
-                }
-            }, 1500);
-
-        } catch (err) {
-            console.error(err);
-            btn.style.display = 'inline-block';
-            faceStatus.innerText = "Camera permission denied or unavailable.";
-            showStatus("Camera error: " + err.message, "error");
+    scanInterval = setInterval(async function() {
+      if (video.paused || video.ended) return;
+      try {
+        var detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+          .withFaceLandmarks().withFaceDescriptors();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (detections.length > 0) {
+          var resized = faceapi.resizeResults(detections, { width: video.videoWidth || 360, height: video.videoHeight || 270 });
+          resized.forEach(function(det) {
+            var box = det.detection.box;
+            var matched = findMatch(det.descriptor);
+            if (matched) {
+              ctx.strokeStyle = '#0f9d58'; ctx.lineWidth = 3;
+              ctx.strokeRect(box.x, box.y, box.width, box.height);
+              ctx.fillStyle = '#0f9d58'; ctx.font = 'bold 12px Segoe UI';
+              ctx.fillText(matched, box.x, box.y - 5);
+              markFace(matched, subject);
+            } else {
+              ctx.strokeStyle = '#db4437'; ctx.lineWidth = 2;
+              ctx.strokeRect(box.x, box.y, box.width, box.height);
+              ctx.fillStyle = '#db4437'; ctx.font = '11px Segoe UI';
+              ctx.fillText('Unknown', box.x, box.y - 5);
+            }
+          });
         }
+      } catch(e) { console.error(e); }
+    }, 1200);
+  }
+
+  function findMatch(descriptor) {
+    var best = null, bestDist = 0.48;
+    Object.keys(allFaces || {}).forEach(function(id) {
+      var stored = new Float32Array(allFaces[id]);
+      var dist = faceapi.euclideanDistance(descriptor, stored);
+      if (dist < bestDist) { bestDist = dist; best = id; }
+    });
+    return best;
+  }
+
+  var lastMarked = {};
+  function markFace(id, subject) {
+    var now = Date.now();
+    if (lastMarked[id] && now - lastMarked[id] < 10000) return;
+    lastMarked[id] = now;
+
+    var token = document.getElementById('token').value.trim();
+    fetch(appUrl(), {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'face', token: token })
+    })
+      .then(function() {
+        showResult('result', 'ok', 'Marked ' + action + ': ' + id);
+        addLog(id + ' - ' + action + ' (' + subject + ')');
+      })
+      .catch(function(err) { showResult('result', 'err', 'Network error: ' + err); });
+  }
+
+  function stopScan() {
+    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+    if (scanStream) { scanStream.getTracks().forEach(function(t) { t.stop(); }); scanStream = null; }
+    var v = document.getElementById('faceVideo'); var c = document.getElementById('faceCanvas');
+    if (v) v.srcObject = null;
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  }
+
+  async function startRegCamera() {
+    var video = document.getElementById('regVideo');
+    try {
+      regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 360 }, height: { ideal: 270 } } });
+      video.srcObject = regStream;
+      await video.play();
+      showResult('regResult', 'info', 'Camera started. Position your face and click Capture & Register.');
+    } catch(e) {
+      showResult('regResult', 'err', 'Camera error: ' + (e.message || e));
     }
+  }
+
+  async function registerFace() {
+    var studentId = currentStudentId();
+    if (!studentId) { showResult('regResult', 'err', 'Select or enter a student ID!'); return; }
+    if (!appUrl()) { showResult('regResult', 'err', 'Enter Web App URL!'); return; }
+
+    var video = document.getElementById('regVideo');
+    if (!regStream || video.paused || video.ended) {
+      await startRegCamera();
+      await new Promise(function(r) { setTimeout(r, 1500); });
+    }
+
+    showResult('regResult', 'info', 'Loading models & detecting face...');
+    var loaded = await loadFaceModels();
+    if (!loaded) { showResult('regResult', 'err', 'Failed to load models.'); return; }
+
+    try {
+      var detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks().withFaceDescriptor();
+      if (!detection) { showResult('regResult', 'err', 'No face detected. Ensure good lighting and try again.'); return; }
+
+      showResult('regResult', 'info', 'Saving face registration...');
+      var token = document.getElementById('token').value.trim();
+      fetch(appUrl(), {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ type: 'saveFace', studentId: studentId, descriptor: Array.from(detection.descriptor), token: token })
+      })
+        .then(function() {
+          showResult('regResult', 'ok', 'Face registered for ' + studentId + '!');
+          stopCamera();
+        })
+        .catch(function(err) {
+          showResult('regResult', 'err', 'Network error: ' + err);
+          stopCamera();
+        });
+    } catch(e) {
+      showResult('regResult', 'err', 'Error: ' + e.message);
+      stopCamera();
+    }
+  }
+
+  async function registerFromPhoto(fileInput) {
+    var studentId = currentStudentId();
+    if (!studentId) { showResult('regResult', 'err', 'Select or enter a student ID!'); fileInput.value = ''; return; }
+    if (!appUrl()) { showResult('regResult', 'err', 'Enter Web App URL!'); fileInput.value = ''; return; }
+    if (!fileInput.files || fileInput.files.length === 0) return;
+
+    showResult('regResult', 'info', 'Processing photo for registration...');
+    var loaded = await loadFaceModels();
+    if (!loaded) { showResult('regResult', 'err', 'Failed to load models.'); fileInput.value = ''; return; }
+
+    var img = document.createElement('img');
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      img.src = e.target.result;
+      img.onload = async function() {
+        try {
+          var detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+            .withFaceLandmarks().withFaceDescriptor();
+          if (!detection) {
+            showResult('regResult', 'err', 'No face detected in photo. Try another photo.');
+            fileInput.value = '';
+            return;
+          }
+          var token = document.getElementById('token').value.trim();
+          fetch(appUrl(), {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ type: 'saveFace', studentId: studentId, descriptor: Array.from(detection.descriptor), token: token })
+          })
+            .then(function() {
+              showResult('regResult', 'ok', 'Face registered via photo for ' + studentId + '!');
+              fileInput.value = '';
+            })
+            .catch(function(err) {
+              showResult('regResult', 'err', 'Network error: ' + err);
+              fileInput.value = '';
+            });
+        } catch(err) {
+          showResult('regResult', 'err', 'Error processing photo: ' + err);
+          fileInput.value = '';
+        }
+      };
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  }
+
+  function stopCamera() {
+    if (regStream) { regStream.getTracks().forEach(function(t) { t.stop(); }); regStream = null; }
+    var v = document.getElementById('regVideo'); if (v) v.srcObject = null;
+  }
+
+  var serverAppUrl = "<?= appUrl ?>";
+  if (serverAppUrl && serverAppUrl.indexOf('http') === 0) {
+    localStorage.setItem('attAppUrl', serverAppUrl);
+  }
+  document.getElementById('appUrl').value = localStorage.getItem('attAppUrl') || '';
+  if (appUrl()) {
+    loadSubjects();
+    loadStudents();
+    loadFaces();
+  }
+
+  window.addEventListener('beforeunload', function() { stopScan(); stopCamera(); });
 </script>
 
 </body>
