@@ -1,71 +1,269 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner - School Attendance</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; text-align: center; }
-        .card { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 15px; }
-        .btn-back { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 15px; }
-        #status { margin-top: 20px; padding: 12px; border-radius: 6px; font-weight: bold; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; }
+  .header {
+    background: linear-gradient(135deg, #ff6f00, #e65100); color: white;
+    padding: 16px 20px; text-align: center;
+  }
+  .header h1 { font-size: 18px; }
+  .header p { opacity: .85; font-size: 12px; margin-top: 3px; }
+  .container { max-width: 520px; margin: 15px auto; padding: 0 12px; }
+  .card {
+    background: white; border-radius: 12px; padding: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08); margin-bottom: 12px;
+  }
+  label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #555; }
+  select, input {
+    width: 100%; padding: 9px 10px; border: 2px solid #ddd; border-radius: 8px;
+    font-size: 14px; margin-bottom: 10px;
+  }
+  .toggle { display: flex; border-radius: 10px; overflow: hidden; border: 3px solid #ddd; margin: 10px 0; }
+  .toggle button {
+    flex: 1; padding: 12px; font-size: 16px; font-weight: 700;
+    border: none; cursor: pointer; background: #e0e0e0; color: #666;
+  }
+  .toggle .in.active { background: #0f9d58; color: white; }
+  .toggle .out.active { background: #db4437; color: white; }
+  .btn {
+    display: inline-block; padding: 10px 22px; border: none; border-radius: 8px;
+    font-weight: 600; cursor: pointer; font-size: 13px; color: white;
+  }
+  .btn-orange { background: #ff6f00; }
+  .btn-red { background: #db4437; }
+  #reader { max-width: 400px; margin: 12px auto; }
+  #reader video { border-radius: 8px; }
+  .result {
+    padding: 12px; border-radius: 8px; text-align: center; font-size: 14px;
+    font-weight: 700; display: none; margin-top: 10px;
+  }
+  .result.ok { background: #e6f4ea; color: #0f9d58; border: 2px solid #0f9d58; display: block; }
+  .result.err { background: #fce8e6; color: #db4437; border: 2px solid #db4437; display: block; }
+  .result.info { background: #fef7e0; color: #f57f17; border: 2px solid #f57f17; display: block; }
+  .log { max-height: 180px; overflow-y: auto; margin-top: 10px; }
+  .log-item { padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 4px; font-size: 12px; background: #fafafa; }
+  .center { text-align: center; }
+</style>
 </head>
 <body>
 
-<div class="card">
-    <h2>QR Code Attendance Scanner</h2>
+<div class="header">
+  <h1>Attendance Scanner</h1>
+  <p>Scan QR / Barcode to mark IN / OUT</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <label>App Script Web App URL</label>
+    <input type="text" id="appUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="onAppUrlChanged()">
+    <p style="font-size:11px; color:#888; margin-top:-6px; margin-bottom:10px;">Paste your /exec URL (saved in browser)</p>
+
+    <label>Subject</label>
+    <select id="subject"><option value="">-- Select Subject --</option></select>
+    <input type="text" id="manualSubject" placeholder="Or type subject name manually" style="display:none;">
+    <button class="btn" style="background:#ddd;color:#333;width:100%;margin-bottom:10px;" onclick="toggleManualSubject()">Can't see subjects? Enter manually</button>
+
+    <label>Scanner Token (optional - only if you set SCANNER_TOKEN)</label>
+    <input type="text" id="token" placeholder="Leave blank if not set">
+  </div>
+
+  <div class="card">
+    <div class="toggle">
+      <button class="in active" onclick="setAction('IN', this)">IN</button>
+      <button class="out" onclick="setAction('OUT', this)">OUT</button>
+    </div>
+    <div class="center">
+      <button class="btn btn-orange" onclick="startScan()">Start Scanner</button>
+      <button class="btn btn-red" onclick="stopScan()">Stop</button>
+    </div>
     <div id="reader"></div>
-    <div id="status"></div>
-    <button class="btn-back" onclick="window.location.href='index.html'">Back to Dashboard</button>
+    <div class="result" id="result"></div>
+    <div class="log" id="log"></div>
+  </div>
+
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Replace with your Web App URL
+  var action = "IN";
+  var scanner = null;
 
-    function showStatus(message, type) {
-        const statusDiv = document.getElementById('status');
-        statusDiv.className = type;
-        statusDiv.innerText = message;
-        setTimeout(() => { statusDiv.className = ""; statusDiv.innerText = ""; }, 4000);
+  function appUrl() {
+    var url = document.getElementById('appUrl').value.trim();
+    if (url && url.indexOf('/edit') !== -1) {
+      alert('⚠️ Warning: You entered the Script Editor URL ("/edit"). Please use the Web App Deployment URL ending in "/exec".');
     }
+    if (url) localStorage.setItem('attAppUrl', url);
+    return url;
+  }
 
-    function sendAttendance(studentId) {
-        if (!studentId) return;
-        showStatus("Processing " + studentId + "...", "info");
-        
-        fetch(APPS_SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "markAttendance", studentId: studentId, method: "QR Code" })
+  function currentToken() {
+    return document.getElementById('token').value.trim();
+  }
+
+  function apiUrl(actionName) {
+    var token = currentToken();
+    return appUrl() + '?action=' + actionName + (token ? '&token=' + encodeURIComponent(token) : '');
+  }
+
+  function onAppUrlChanged() {
+    var url = appUrl();
+    if (url && url.indexOf('http') === 0) {
+      loadSubjects();
+    }
+  }
+
+  function setAction(a, btn) {
+    action = a;
+    btn.parentElement.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function toggleManualSubject() {
+    var s = document.getElementById('manualSubject');
+    s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function currentSubject() {
+    var sel = document.getElementById('subject').value;
+    var manual = document.getElementById('manualSubject').value.trim();
+    return manual || sel;
+  }
+
+  function loadViaJsonp(url, onSuccess, onError) {
+    var scriptId = 'jsonp_' + Math.random().toString(36).substring(7);
+    window[scriptId] = function(data) {
+      delete window[scriptId];
+      var el = document.getElementById(scriptId);
+      if (el) el.remove();
+      onSuccess(data);
+    };
+    var script = document.createElement('script');
+    script.id = scriptId;
+    script.src = url + '&callback=' + scriptId;
+    script.onerror = function() {
+      delete window[scriptId];
+      script.remove();
+      if (onError) onError();
+    };
+    document.body.appendChild(script);
+  }
+
+  function loadData(actionName, onSuccess, onError) {
+    var targetUrl = apiUrl(actionName);
+    loadViaJsonp(targetUrl, function(data) {
+      if (data && data.error) {
+        if (onError) onError(new Error(data.error));
+        return;
+      }
+      onSuccess(data);
+    }, function() {
+      fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl))
+        .then(function(res) { return res.text(); })
+        .then(function(text) {
+          if (!text || text.trim().indexOf('<') === 0) {
+            throw new Error('Apps Script returned HTML. Ensure Web App access is set to "Anyone".');
+          }
+          var parsed = JSON.parse(text);
+          onSuccess(parsed);
         })
-        .then(() => {
-            showStatus("Attendance marked successfully for " + studentId, "success");
-        })
-        .catch(err => {
-            showStatus("Failed to send data to server.", "error");
+        .catch(function(err) {
+          fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl))
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              var text = data.contents;
+              if (!text || text.trim().indexOf('<') === 0) {
+                throw new Error('Apps Script returned HTML. Ensure Web App access is set to "Anyone".');
+              }
+              var parsed = JSON.parse(text);
+              onSuccess(parsed);
+            })
+            .catch(function(err2) {
+              if (onError) onError(new Error('Failed to load. Ensure Web App access is set to "Anyone".'));
+            });
         });
-    }
-
-    const html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-            sendAttendance(decodedText.trim());
-            html5QrCode.pause();
-            setTimeout(() => { html5QrCode.resume(); }, 3000);
-        },
-        (error) => {}
-    ).catch(err => {
-        showStatus("Camera permission denied or unavailable.", "error");
     });
+  }
+
+  function loadSubjects() {
+    if (!appUrl()) return;
+    loadData('subjects', function(data) {
+      if (data.error) { showResult('err', data.error); return; }
+      var sel = document.getElementById('subject');
+      sel.innerHTML = '<option value="">-- Select Subject --</option>';
+      (data || []).forEach(function(s) {
+        sel.innerHTML += '<option value="' + s.name + '">' + s.name + (s.no ? ' (No ' + s.no + ')' : '') + '</option>';
+      });
+    }, function() {
+      showResult('err', 'Cannot load subjects. Check Web App URL or use manual entry.');
+    });
+  }
+
+  function startScan() {
+    var subject = currentSubject();
+    if (!subject) { showResult('err', 'Select a subject!'); return; }
+
+    document.getElementById('reader').innerHTML = '';
+    if (scanner) { try { scanner.clear(); } catch(e) {} }
+
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+      function(decodedText) { handleScan(decodedText.trim()); },
+      function() {}
+    ).catch(function(err) {});
+  }
+
+  function stopScan() {
+    if (scanner) {
+      scanner.stop().then(function() { scanner.clear(); scanner = null; }).catch(function() {});
+    }
+  }
+
+  function handleScan(id) {
+    var subject = currentSubject();
+    if (!subject) { showResult('err', 'Select a subject!'); return; }
+    var url = appUrl();
+    if (!url || url.indexOf('http') !== 0) { showResult('err', 'Enter Web App URL!'); return; }
+
+    fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'scanner', token: currentToken() })
+    })
+      .then(function() {
+        showResult('ok', 'Marked ' + action + ' for ' + id + ' (' + subject + ')');
+        addLog(id + ' - Marked ' + action + ' for ' + subject);
+      })
+      .catch(function(err) {
+        showResult('err', 'Network error: ' + err);
+      });
+  }
+
+  function showResult(type, msg) {
+    var el = document.getElementById('result');
+    el.className = 'result ' + type;
+    el.textContent = msg;
+    setTimeout(function() { el.className = 'result'; }, 3500);
+  }
+
+  function addLog(msg) {
+    var log = document.getElementById('log');
+    log.innerHTML = '<div class="log-item">' + msg + '</div>' + log.innerHTML;
+  }
+
+  var serverAppUrl = "<?= appUrl ?>";
+  if (serverAppUrl && serverAppUrl.indexOf('http') === 0) {
+    localStorage.setItem('attAppUrl', serverAppUrl);
+  }
+  document.getElementById('appUrl').value = localStorage.getItem('attAppUrl') || '';
+  if (appUrl()) loadSubjects();
 </script>
 
 </body>
