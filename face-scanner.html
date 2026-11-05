@@ -75,9 +75,9 @@
 <div class="container">
 
   <div class="card">
-    <label>App Script Web App URL</label>
+    <!--<label>App Script Web App URL</label>
     <input type="text" id="appUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="onAppUrlChanged()">
-    <p class="hint">Paste your /exec URL (saved in browser)</p>
+    <p class="hint">Paste your /exec URL (saved in browser)</p> -->
     <label>Scanner Token (optional)</label>
     <input type="text" id="token" placeholder="Leave blank if not set">
     <button class="btn btn-purple" style="width:100%; margin-top:8px; padding:8px; font-size:12px;" onclick="reloadAllData()">🔄 Reload Subjects &amp; Students</button>
@@ -152,6 +152,7 @@
   var action = 'IN';
   var allFaces = {};
   var studentMap = {};
+  var appUrl= https://script.google.com/macros/s/AKfycbxMHvLvF7YYQBiayH81xHzpZJmnC4Jzr-s99_aX3dXRCO2kzV873KReqaZrkuLU-oSYRg/exec;
 
   function appUrl() {
     var url = document.getElementById('appUrl').value.trim();
