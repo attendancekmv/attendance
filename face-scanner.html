@@ -75,9 +75,6 @@
 <div class="container">
 
   <div class="card">
-    <!--<label>App Script Web App URL</label>
-    <input type="text" id="appUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="onAppUrlChanged()">
-    <p class="hint">Paste your /exec URL (saved in browser)</p> -->
     <label>Scanner Token (optional)</label>
     <input type="text" id="token" placeholder="Leave blank if not set">
     <button class="btn btn-purple" style="width:100%; margin-top:8px; padding:8px; font-size:12px;" onclick="reloadAllData()">🔄 Reload Subjects &amp; Students</button>
@@ -152,15 +149,16 @@
   var action = 'IN';
   var allFaces = {};
   var studentMap = {};
-  var appUrl= https://script.google.com/macros/s/AKfycbxMHvLvF7YYQBiayH81xHzpZJmnC4Jzr-s99_aX3dXRCO2kzV873KReqaZrkuLU-oSYRg/exec;
+  var DEFAULT_APP_URL = "https://script.google.com/macros/s/AKfycbwKpXbC9dTYfy-Huz5InGjPI7ESV-PGWRNCK2jtVX2Ln6KtG0Yfjw5OZtr-bqXMOAVL/exec";
 
   function appUrl() {
-    var url = document.getElementById('appUrl').value.trim();
-    if (url && url.indexOf('/edit') !== -1) {
-      alert('⚠️ Warning: You entered the Script Editor URL ("/edit"). Please use the Web App Deployment URL ending in "/exec".');
+    var serverAppUrl = "<?= appUrl ?>";
+    if (serverAppUrl && serverAppUrl.indexOf('http') === 0) {
+      return serverAppUrl;
     }
-    if (url) localStorage.setItem('attAppUrl', url);
-    return url;
+    var saved = localStorage.getItem('attAppUrl');
+    if (saved) return saved;
+    return DEFAULT_APP_URL;
   }
   function apiUrl(actionName) {
     var token = document.getElementById('token').value.trim();
@@ -535,7 +533,6 @@
   if (serverAppUrl && serverAppUrl.indexOf('http') === 0) {
     localStorage.setItem('attAppUrl', serverAppUrl);
   }
-  document.getElementById('appUrl').value = localStorage.getItem('attAppUrl') || '';
   if (appUrl()) {
     loadSubjects();
     loadStudents();
