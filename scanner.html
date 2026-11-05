@@ -224,24 +224,30 @@
     }
   }
 
+  var lastScanned = {};
   function handleScan(id) {
     var subject = currentSubject();
     if (!subject) { showResult('err', 'Select a subject!'); return; }
-    var url = appUrl();
-    if (!url || url.indexOf('http') !== 0) { showResult('err', 'Enter Web App URL!'); return; }
+    
+    var now = Date.now();
+    if (lastScanned[id] && now - lastScanned[id] < 10000) {
+      return; // prevent rapid duplicate scans within 10 seconds
+    }
+    lastScanned[id] = now;
 
-    fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'scanner', token: currentToken() })
-    })
-      .then(function() {
-        showResult('ok', 'Marked ' + action + ' for ' + id + ' (' + subject + ')');
-        addLog(id + ' - Marked ' + action + ' for ' + subject);
-      })
-      .catch(function(err) {
-        showResult('err', 'Network error: ' + err);
-      });
+    var token = currentToken();
+    var targetUrl = appUrl() + '?action=mark&studentId=' + encodeURIComponent(id) + '&subject=' + encodeURIComponent(subject) + '&act=' + encodeURIComponent(action) + '&method=scanner' + (token ? '&token=' + encodeURIComponent(token) : '');
+
+    loadViaJsonp(targetUrl, function(res) {
+      if (res && res.success) {
+        showResult('ok', res.msg || ('Marked ' + action + ' for ' + id));
+        addLog(id + ' - ' + (res.msg || ('Marked ' + action + ' for ' + subject)));
+      } else {
+        showResult('err', res && res.msg ? res.msg : 'Failed to mark attendance');
+      }
+    }, function() {
+      showResult('err', 'Network or connection error.');
+    });
   }
 
   function showResult(type, msg) {
