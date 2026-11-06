@@ -350,11 +350,17 @@
     var ctx = canvas.getContext('2d');
 
     try {
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 360 }, height: { ideal: 270 } } });
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 360 }, height: { ideal: 270 } } });
       video.srcObject = scanStream;
       await video.play();
     } catch(e) {
-      return;
+      try {
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 360 }, height: { ideal: 270 } } });
+        video.srcObject = scanStream;
+        await video.play();
+      } catch(err) {
+        return;
+      }
     }
 
     showResult('result', 'info', 'Scanning face...');
