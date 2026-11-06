@@ -405,18 +405,16 @@
     lastMarked[id] = now;
 
     var token = document.getElementById('token').value.trim();
-    var targetUrl = appUrl() + '?action=mark&studentId=' + encodeURIComponent(id) + '&subject=' + encodeURIComponent(subject) + '&act=' + encodeURIComponent(action) + '&method=face' + (token ? '&token=' + encodeURIComponent(token) : '');
-
-    loadViaJsonp(targetUrl, function(res) {
-      if (res && res.success) {
-        showResult('result', 'ok', res.msg || ('Marked ' + action + ': ' + id));
-        addLog(id + ' - ' + (res.msg || (action + ' (' + subject + ')')));
-      } else {
-        showResult('result', 'err', res && res.msg ? res.msg : 'Failed to mark face attendance');
-      }
-    }, function() {
-      showResult('result', 'err', 'Network error marking face.');
-    });
+    fetch(appUrl(), {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'face', token: token })
+    })
+      .then(function() {
+        showResult('result', 'ok', 'Marked ' + action + ': ' + id);
+        addLog(id + ' - ' + action + ' (' + subject + ')');
+      })
+      .catch(function(err) { showResult('result', 'err', 'Network error: ' + err); });
   }
 
   function stopScan() {
