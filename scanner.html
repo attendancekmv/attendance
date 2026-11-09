@@ -65,6 +65,18 @@
     <input type="text" id="manualSubject" placeholder="Or type subject name manually" style="display:none;">
     <button class="btn" style="background:#ddd;color:#333;width:100%;margin-bottom:10px;" onclick="toggleManualSubject()">Can't see subjects? Enter manually</button>
 
+    <label>Expected Start Time (x)</label>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="time" id="scanStartTime" value="08:00" style="margin-bottom:0;">
+      <button class="btn" style="background:#555; padding:8px 12px; font-size:12px; color:white;" onclick="setScanStartTimeNow()">Now</button>
+    </div>
+
+    <label>Arrival Time (y)</label>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="time" id="scanCustomTime" style="margin-bottom:0;">
+      <button class="btn" style="background:#555; padding:8px 12px; font-size:12px; color:white;" onclick="setScanArrivalTimeNow()">Now</button>
+    </div>
+
     <label>Scanner Token (optional - only if you set SCANNER_TOKEN)</label>
     <input type="text" id="token" placeholder="Leave blank if not set">
   </div>
@@ -224,6 +236,20 @@
     }
   }
 
+  function setScanStartTimeNow() {
+    var d = new Date();
+    var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+    var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+    document.getElementById('scanStartTime').value = hh + ':' + mm;
+  }
+
+  function setScanArrivalTimeNow() {
+    var d = new Date();
+    var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+    var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+    document.getElementById('scanCustomTime').value = hh + ':' + mm;
+  }
+
   var lastScanned = {};
   function handleScan(id) {
     var subject = currentSubject();
@@ -238,10 +264,21 @@
     var url = appUrl();
     if (!url || url.indexOf('http') !== 0) { showResult('err', 'Enter Web App URL!'); return; }
 
+    var startTime = document.getElementById('scanStartTime').value.trim() || '08:00';
+    var customTime = document.getElementById('scanCustomTime').value.trim();
+
     fetch(url, {
       method: 'POST',
       mode: 'no-cors',
-      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'scanner', token: currentToken() })
+      body: JSON.stringify({
+        studentId: id,
+        subject: subject,
+        action: action,
+        method: 'scanner',
+        token: currentToken(),
+        startTime: startTime,
+        customTime: customTime
+      })
     })
       .then(function() {
         showResult('ok', 'Marked ' + action + ' for ' + id + ' (' + subject + ')');
