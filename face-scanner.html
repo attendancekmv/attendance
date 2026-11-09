@@ -433,18 +433,42 @@
 
   async function startRegCamera() {
     var video = document.getElementById('regVideo');
+    if (regStream) {
+      regStream.getTracks().forEach(function(t) { t.stop(); });
+      regStream = null;
+    }
     try {
       try {
-        regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' }, width: { ideal: 360 }, height: { ideal: 270 } } });
-      } catch(ex) {
-        regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 360 }, height: { ideal: 270 } } });
+        regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+      } catch (err1) {
+        try {
+          regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        } catch (err2) {
+          if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            var devices = await navigator.mediaDevices.enumerateDevices();
+            var videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
+            var backCam = videoDevices.find(function(d) {
+              var label = (d.label || '').toLowerCase();
+              return label.indexOf('back') !== -1 || label.indexOf('rear') !== -1 || label.indexOf('environment') !== -1 || label.indexOf('achter') !== -1;
+            });
+            if (backCam) {
+              regStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backCam.deviceId } } });
+            } else if (videoDevices.length > 0) {
+              regStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: videoDevices[videoDevices.length - 1].deviceId } } });
+            } else {
+              regStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+          } else {
+            regStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+        }
       }
       video.srcObject = regStream;
       await video.play();
-      showResult('regResult', 'info', 'Back camera started. Position student and click Capture & Register.');
+      showResult('regResult', 'info', 'Back camera started. Position face and click Capture & Register.');
     } catch(e) {
       try {
-        regStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 360 }, height: { ideal: 270 } } });
+        regStream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = regStream;
         await video.play();
         showResult('regResult', 'info', 'Camera started.');
