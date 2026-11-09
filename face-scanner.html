@@ -434,12 +434,23 @@
   async function startRegCamera() {
     var video = document.getElementById('regVideo');
     try {
-      regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 360 }, height: { ideal: 270 } } });
+      try {
+        regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' }, width: { ideal: 360 }, height: { ideal: 270 } } });
+      } catch(ex) {
+        regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 360 }, height: { ideal: 270 } } });
+      }
       video.srcObject = regStream;
       await video.play();
-      showResult('regResult', 'info', 'Camera started. Position your face and click Capture & Register.');
+      showResult('regResult', 'info', 'Back camera started. Position student and click Capture & Register.');
     } catch(e) {
-      showResult('regResult', 'err', 'Camera error: ' + (e.message || e));
+      try {
+        regStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 360 }, height: { ideal: 270 } } });
+        video.srcObject = regStream;
+        await video.play();
+        showResult('regResult', 'info', 'Camera started.');
+      } catch(e2) {
+        showResult('regResult', 'err', 'Camera error: ' + (e2.message || e2));
+      }
     }
   }
 
