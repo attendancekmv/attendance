@@ -93,6 +93,18 @@
       <input type="text" id="manualSubject" placeholder="Or type subject name manually" style="display:none;">
       <button class="btn btn-block" style="background:#ddd;color:#333;margin-bottom:10px;font-size:12px;padding:8px;" onclick="toggleManualSubject()">Can't see subjects? Enter manually</button>
 
+      <label>Expected Start Time (x)</label>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="time" id="faceStartTime" value="08:00" style="margin-bottom:0;">
+        <button class="btn btn-purple" style="padding:8px 12px; font-size:12px;" onclick="setFaceStartTimeNow()">Now</button>
+      </div>
+
+      <label>Arrival Time (y)</label>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="time" id="faceCustomTime" style="margin-bottom:0;">
+        <button class="btn btn-purple" style="padding:8px 12px; font-size:12px;" onclick="setFaceArrivalTimeNow()">Now</button>
+      </div>
+
       <div class="toggle">
         <button class="in active" onclick="setAction('IN', this)">IN</button>
         <button class="out" onclick="setAction('OUT', this)">OUT</button>
@@ -404,17 +416,42 @@
     return best;
   }
 
+  function setFaceStartTimeNow() {
+    var d = new Date();
+    var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+    var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+    document.getElementById('faceStartTime').value = hh + ':' + mm;
+  }
+
+  function setFaceArrivalTimeNow() {
+    var d = new Date();
+    var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+    var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+    document.getElementById('faceCustomTime').value = hh + ':' + mm;
+  }
+
   var lastMarked = {};
   function markFace(id, subject) {
     var now = Date.now();
     if (lastMarked[id] && now - lastMarked[id] < 10000) return;
     lastMarked[id] = now;
 
+    var startTime = document.getElementById('faceStartTime').value.trim() || '08:00';
+    var customTime = document.getElementById('faceCustomTime').value.trim();
     var token = document.getElementById('token').value.trim();
+
     fetch(appUrl(), {
       method: 'POST',
       mode: 'no-cors',
-      body: JSON.stringify({ studentId: id, subject: subject, action: action, method: 'face', token: token })
+      body: JSON.stringify({
+        studentId: id,
+        subject: subject,
+        action: action,
+        method: 'face',
+        token: token,
+        startTime: startTime,
+        customTime: customTime
+      })
     })
       .then(function() {
         showResult('result', 'ok', 'Marked ' + action + ': ' + id);
